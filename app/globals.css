@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "tw-animate-css";
 @theme {
   --color-background: oklch(0.9548 0.0189 67.6);
   --color-foreground: oklch(0.2326 0.0036 48.56);
