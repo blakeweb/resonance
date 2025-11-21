@@ -1,15 +1,26 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import {
+  Geist_Mono,
+  Libertinus_Serif_Display,
+  Reddit_Sans,
+} from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const fontSansCustom = Reddit_Sans({
+  variable: "--font-sans-custom",
   subsets: ["latin"],
+  weight: ["400"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const fontSerifCustom = Libertinus_Serif_Display({
+  variable: "--font-serif-custom",
+  subsets: ["latin"],
+  weight: ["400"],
 });
 
 export const metadata: Metadata = {
@@ -23,12 +34,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
+    <html
+      lang="en"
+      className={`${fontSansCustom.variable} ${fontSerifCustom.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+    >
+      <body>{children}</body>
     </html>
   );
 }

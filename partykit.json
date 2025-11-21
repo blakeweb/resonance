@@ -1,0 +1,9 @@
+{
+  "name": "resonance-voting",
+  "main": "party/server.ts",
+  "minify": false,
+  "serve": {
+    "host": "127.0.0.1",
+    "port": 1999
+  }
+}
