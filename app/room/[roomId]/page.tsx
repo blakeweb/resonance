@@ -53,7 +53,9 @@ export default function RoomPage() {
   };
 
   const socket = usePartySocket({
-    host: "127.0.0.1:1999",
+    host: process.env.NODE_ENV === 'production'
+      ? "resonance-party.robgordon.workers.dev"
+      : "127.0.0.1:1999",
     room: roomId,
     id: userId!,
     // Only create socket connection when we have a userId
