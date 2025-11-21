@@ -247,13 +247,24 @@ export class ResonanceServer extends Server {
   }
 }
 
-const partykitHandler = {
+export default {
   fetch(request: Request, env: Record<string, unknown>) {
-    return (
-      routePartykitRequest(request, env) ||
-      new Response("Not Found", { status: 404 })
-    );
+    console.log(`🌐 [WORKER] ${request.method} request to ${request.url}`);
+    console.log(`🌐 [WORKER] Environment bindings:`, Object.keys(env));
+    console.log(`🌐 [WORKER] Headers:`, Object.fromEntries(request.headers.entries()));
+
+    try {
+      const response = routePartykitRequest(request, env);
+      if (response) {
+        console.log(`✅ [WORKER] Routed successfully`);
+        return response;
+      } else {
+        console.log(`⚠️ [WORKER] No route found`);
+        return new Response("Not Found", { status: 404 });
+      }
+    } catch (error) {
+      console.error(`❌ [WORKER] Error in routePartykitRequest:`, error);
+      return new Response(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`, { status: 500 });
+    }
   },
 };
-
-export default partykitHandler;
