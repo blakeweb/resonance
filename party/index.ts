@@ -7,6 +7,7 @@ export class ResonanceServer extends Server {
   };
 
   private pendingRemovals: Map<string, number> = new Map(); // Use number for CloudFlare timer IDs
+  private sessionState: Session | null = null;
 
   async onConnect(conn: Connection) {
     console.log(`User ${conn.id} connected to room ${this.name}`);
@@ -20,12 +21,12 @@ export class ResonanceServer extends Server {
     }
 
     // Initialize session if it doesn't exist
-    let session = await this.storage.get<Session>("session");
-    if (!session) {
-      session = initializeSession();
-      await this.storage.put("session", session);
-      console.log(`Initialized new session for room ${this.name}:`, session);
+    if (!this.sessionState) {
+      this.sessionState = initializeSession();
+      console.log(`Initialized new session for room ${this.name}:`, this.sessionState);
     }
+
+    let session = this.sessionState;
 
     // If user has an ID and there are statements, add them to all unresolved statements
     if (conn.id && session && session.statements.length > 0) {
@@ -54,7 +55,7 @@ export class ResonanceServer extends Server {
 
       if (JSON.stringify(updatedSession) !== JSON.stringify(session)) {
         session = updatedSession;
-        await this.storage.put("session", session);
+        this.sessionState = session;
 
         // Log what changed
         const updatedUnresolvedStatements = getUnresolvedStatements(session);
@@ -97,13 +98,12 @@ export class ResonanceServer extends Server {
 
       switch (data.type) {
         case "get_session":
-          const session = await this.storage.get<Session>("session");
-          if (session) {
+          if (this.sessionState) {
             connection.send(JSON.stringify({
               type: "session_state",
-              session: session
+              session: this.sessionState
             }));
-            console.log(`Sent session state to ${connection.id}:`, session);
+            console.log(`Sent session state to ${connection.id}:`, this.sessionState);
           }
           break;
 
@@ -125,9 +125,10 @@ export class ResonanceServer extends Server {
 
   async handleAddStatement(payload: { text: string; userId: string }) {
     // Get current session
-    let session = await this.storage.get<Session>("session");
+    let session = this.sessionState;
     if (!session) {
       session = initializeSession();
+      this.sessionState = session;
     }
 
     // Get list of currently connected users
@@ -158,7 +159,7 @@ export class ResonanceServer extends Server {
     });
 
     // Save updated session
-    await this.storage.put("session", finalSession);
+    this.sessionState = finalSession;
     console.log(`Session updated:`, finalSession);
 
     // Broadcast to all connections
@@ -170,7 +171,7 @@ export class ResonanceServer extends Server {
 
   async handleVoteResponse(payload: { statementIndex: number; userId: string; response: boolean }) {
     // Get current session
-    const session = await this.storage.get<Session>("session");
+    const session = this.sessionState;
     if (!session) return;
 
     console.log(`Vote from ${payload.userId} on statement ${payload.statementIndex}: ${payload.response}`);
@@ -186,7 +187,7 @@ export class ResonanceServer extends Server {
     });
 
     // Save updated session
-    await this.storage.put("session", updatedSession);
+    this.sessionState = updatedSession;
     console.log(`Session updated after vote:`, updatedSession);
 
     // Broadcast to all connections
@@ -216,7 +217,7 @@ export class ResonanceServer extends Server {
   private async removeUserFromStatements(userId: string) {
     console.log(`🗑️ Timeout expired - removing user ${userId} from unresolved statements`);
 
-    const session = await this.storage.get<Session>("session");
+    const session = this.sessionState;
     if (!session) return;
 
     const updatedSession = sessionReducer(session, {
@@ -228,7 +229,7 @@ export class ResonanceServer extends Server {
     });
 
     if (JSON.stringify(updatedSession) !== JSON.stringify(session)) {
-      await this.storage.put("session", updatedSession);
+      this.sessionState = updatedSession;
       console.log(`Removed user ${userId} from unresolved statements:`, updatedSession);
 
       // Broadcast updated session to remaining connections
